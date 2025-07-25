@@ -1,0 +1,14 @@
+25/07/2025 00:17:10 | CPF: 06249136193 | Nome: Matheus Nogueira Franco | Acurácia: 96%
+25/07/2025 00:29:06 | CPF: 06249136193 | Nome: Matheus Nogueira Franco | Acurácia: 96%
+25/07/2025 16:57:36 | CPF: 06249136193 | Nome: matheus | Acurácia: 58%
+25/07/2025 17:00:32 | CPF: 06249136193 | Nome: matheus | Acurácia: 37%
+25/07/2025 17:00:47 | CPF: 06249136193 | Nome: matheus | Acurácia: 33%
+25/07/2025 17:01:04 | CPF: 06249136193 | Nome: matheus | Acurácia: 26%
+25/07/2025 17:01:11 | CPF: 06249136193 | Nome: matheus | Acurácia: 2%
+25/07/2025 17:01:25 | CPF: 06249136193 | Nome: matheus | Acurácia: 35%
+25/07/2025 17:23:31 | CPF: 06249136193 | Nome: matheus | Acurácia: 40%
+25/07/2025 17:28:12 | CPF: 06249136193 | Nome: matheus | Acurácia: 52%
+25/07/2025 17:28:28 | CPF: 06249136193 | Nome: matheus | Acurácia: 82%
+25/07/2025 17:31:49 | CPF: 06249136193 | Nome: matheus | Acurácia: 46%
+25/07/2025 17:38:49 | CPF: 06249136193 | Nome: matheus | Acurácia: 76%
+25/07/2025 17:42:56 | CPF: 06249136193 | Nome: matheus | Acurácia: 81%

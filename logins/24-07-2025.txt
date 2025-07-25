@@ -1,0 +1,18 @@
+24/07/2025 02:56:34 | CPF: 06249136193 | Nome: matheus | Acurácia: 96%
+24/07/2025 20:20:00 | CPF: 06249136193 | Nome: matheus | Acurácia: 96%
+24/07/2025 20:20:58 | CPF: 06249136193 | Nome: matheus | Acurácia: 95%
+24/07/2025 20:23:30 | CPF: 06249136193 | Nome: matheus | Acurácia: 94%
+24/07/2025 20:40:08 | CPF: 06249136193 | Nome: matheus | Acurácia: 96%
+24/07/2025 20:40:46 | CPF: 09165068190 | Nome: Lana Vicente  | Acurácia: 97%
+24/07/2025 20:41:23 | CPF: 09165068190 | Nome: Lana Vicente  | Acurácia: 95%
+24/07/2025 20:42:16 | CPF: 09165068190 | Nome: Lana Vicente  | Acurácia: 98%
+24/07/2025 20:43:35 | CPF: 09165068190 | Nome: Lana Vicente  | Acurácia: 93%
+24/07/2025 20:43:58 | CPF: 09165068190 | Nome: Lana Vicente  | Acurácia: 94%
+24/07/2025 20:48:20 | CPF: 09165068190 | Nome: Lana Vicente  | Acurácia: 97%
+24/07/2025 20:51:18 | CPF: 00122080190 | Nome: carmen | Acurácia: 98%
+24/07/2025 20:51:52 | CPF: 09165068190 | Nome: Lana Vicente  | Acurácia: 95%
+24/07/2025 21:15:04 | CPF: 06249136193 | Nome: Matheus Nogueira Franco | Acurácia: 97%
+24/07/2025 22:33:41 | CPF: 06249136193 | Nome: Matheus Nogueira Franco | Acurácia: 94%
+24/07/2025 23:00:14 | CPF: 06249136193 | Nome: Matheus Nogueira Franco | Acurácia: 96%
+24/07/2025 23:21:11 | CPF: 06249136193 | Nome: Matheus Nogueira Franco | Acurácia: 94%
+24/07/2025 23:22:00 | CPF: 06249136193 | Nome: Matheus Nogueira Franco | Acurácia: 96%
