@@ -1,0 +1,17 @@
+# Pastas de cache
+__pycache__/
+*.pyc
+
+# Banco de dados local
+*.db
+
+# Embeddings e imagens de rosto
+faces/
+*.npy
+
+# Logs
+logins/
+
+# Ambientes virtuais (se tiver)
+venv/
+.env
