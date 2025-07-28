@@ -69,8 +69,10 @@ class ReconhecimentoFacial:
                 continue
             try:
                 resultado = DeepFace.verify(imagem_tratada, imagem_path, model_name='ArcFace')
-                if resultado["verified"] and resultado["distance"] < 0.6:  # Limiar mais restrito
-                    print(f"Usuário autenticado! CPF: {cpf}")
+                # Limiar mais rigoroso
+                if resultado["verified"] and resultado["distance"] < 0.4:
+                    acuracia = max(0, int((1 - resultado["distance"]) * 100))
+                    print(f"Usuário autenticado! CPF: {cpf} | Acurácia: {acuracia}%")
                     return cpf
             except Exception as e:
                 print(f"Erro na verificação: {e}")

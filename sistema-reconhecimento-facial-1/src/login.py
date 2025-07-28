@@ -108,10 +108,11 @@ class Login:
                 try:
                     resultado = DeepFace.verify(imagem_tratada, imagem_path, model_name='ArcFace')
                     print(f"Resultado DeepFace: {resultado}")
-                    if resultado["verified"]:
+                    if resultado["verified"] and resultado["distance"] < 0.4:
+                        acuracia = max(0, int((1 - resultado["distance"]) * 100))
                         if show_message:
-                            messagebox.showinfo("Acesso Liberado", f"Usuário reconhecido!\nCPF: {cpf}")
-                        print(f"Acesso liberado! Usuário reconhecido: CPF {cpf}")
+                            messagebox.showinfo("Acesso Liberado", f"Usuário reconhecido!\nCPF: {cpf}\nAcurácia: {acuracia}%")
+                        print(f"Acesso liberado! Usuário reconhecido: CPF {cpf} | Acurácia: {acuracia}%")
                         return cpf
                 except Exception as e:
                     print(f"Erro na verificação: {e}")

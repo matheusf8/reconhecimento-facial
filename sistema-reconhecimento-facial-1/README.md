@@ -20,6 +20,7 @@ sistema-reconhecimento-facial-1/
 │   └── utils/
 │       └── database.py           # Funções utilitárias para gerenciamento de banco de dados
 ├── requirements.txt              # Dependências do projeto
+├── .gitignore                    # Evita o rastreamento de arquivos
 └── README.md                     # Documentação do projeto
 ```
 

@@ -13,9 +13,32 @@ import datetime
 import warnings
 
 warnings.filterwarnings("ignore")
-
-import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suprime avisos e infos do TensorFlow
+
+# ----------- Funções auxiliares -----------
+
+def gerar_variacao_unica(imagem, indice):
+    """Gera uma variação diferente para cada foto do cadastro."""
+    if indice == 0:
+        # Cinza + equalização
+        img_cinza = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
+        img_eq = cv2.equalizeHist(img_cinza)
+        return cv2.cvtColor(img_eq, cv2.COLOR_GRAY2BGR)
+    elif indice == 1:
+        # Espelhamento horizontal
+        return cv2.flip(imagem, 1)
+    elif indice == 2:
+        # Leve desfoque
+        return cv2.GaussianBlur(imagem, (5, 5), 0)
+    elif indice == 3:
+        # Pequena rotação
+        h, w = imagem.shape[:2]
+        M = cv2.getRotationMatrix2D((w//2, h//2), 7, 1)
+        return cv2.warpAffine(imagem, M, (w, h))
+    else:
+        return imagem
+
+# ----------- Classe principal -----------
 
 class SistemaReconhecimentoFacial:
     def __init__(self, master):
@@ -76,17 +99,15 @@ class SistemaReconhecimentoFacial:
         foto_status_label = Label(self.frame_cadastro, text="Fotos salvas: Não", font=("Arial", 13), bg="#f0f0f0", fg="red")
         foto_status_label.pack(pady=10)
 
-        def gerar_variacoes(imagem):
-            imagens = [imagem]
-            img_cinza = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
-            img_eq = cv2.equalizeHist(img_cinza)
-            img_final = cv2.cvtColor(img_eq, cv2.COLOR_GRAY2BGR)
-            imagens.append(img_final)
-            return imagens
-
         def abrir_camera():
-            # Aviso de iluminação antes de abrir a câmera
-            messagebox.showinfo("Dica de Cadastro", "Tenha boa iluminação para a foto!\nEvite sombras e mantenha o rosto centralizado.")
+            instrucoes = [
+                "Olhe para a câmera e mantenha o rosto centralizado.",
+                "Vire levemente o rosto para a ESQUERDA.",
+                "Vire levemente o rosto para a DIREITA.",
+                "Aproxime o rosto da câmera."
+            ]
+            fotos_capturadas = []
+            passo = [0]
 
             camera_window = Toplevel(self.frame_cadastro)
             camera_window.title("Capturar Rosto")
@@ -99,40 +120,39 @@ class SistemaReconhecimentoFacial:
             l_video = Label(frame_video)
             l_video.pack(expand=True)
 
+            label_instrucao = Label(camera_window, text=instrucoes[0], font=("Arial", 14, "bold"), bg="#f0f0f0", fg="#2196f3")
+            label_instrucao.pack(pady=15)
+
             cap = cv2.VideoCapture(0)
             face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            fotos_capturadas = []
 
-            # Defina as variáveis locais para o escopo do cadastro
-            autenticado = [False]
-            ultimo_frame = [None]
-            lock = threading.Lock()
-            ultimo_rosto_detectado = [0]
-            mensagem_posicionamento = [None]
-            tempo_espera = 1.2  # segundos para a pessoa se posicionar
-
-            def capturar_automatico():
-                count = 0
-                while count < 2:
-                    ret, frame = cap.read()
-                    if not ret:
-                        continue
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-                    if len(faces) > 0:
-                        x, y, w, h = faces[0]
-                        rosto = frame[y:y+h, x:x+w]
-                        rosto = cv2.resize(rosto, (224, 224))
-                        for img_var in gerar_variacoes(rosto):
-                            fotos_capturadas.append(img_var)
-                        count += 1
-                        l_video.after(1, lambda: l_video.config(text=f"Capturando: {count}/2"))
-                    camera_window.update()
-                    time.sleep(0.2)
-                cap.release()
-                camera_window.destroy()
-                self.imagens_faciais_capturadas = fotos_capturadas.copy()
-                foto_status_label.config(text="Fotos salvas: Sim", fg="green")
+            def tirar_foto():
+                ret, frame = cap.read()
+                if not ret:
+                    messagebox.showerror("Erro", "Não foi possível capturar a imagem.")
+                    return
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+                if len(faces) > 0:
+                    x, y, w, h = faces[0]
+                    rosto = frame[y:y+h, x:x+w]
+                    rosto = cv2.resize(rosto, (224, 224))
+                    fotos_capturadas.append(rosto)  # original
+                    # Adiciona a variação específica para este passo
+                    variacao = gerar_variacao_unica(rosto, passo[0])
+                    fotos_capturadas.append(variacao)
+                    passo[0] += 1
+                    if passo[0] < len(instrucoes):
+                        label_instrucao.config(text=instrucoes[passo[0]])
+                        messagebox.showinfo("Foto tirada", "Foto capturada com sucesso!\n" + ("Próxima orientação: " + instrucoes[passo[0]]))
+                    else:
+                        cap.release()
+                        camera_window.destroy()
+                        self.imagens_faciais_capturadas = fotos_capturadas.copy()
+                        foto_status_label.config(text="Fotos salvas: Sim", fg="green")
+                else:
+                    messagebox.showwarning("Atenção", "Nenhum rosto detectado. Tente novamente.")
+                    return
 
             def mostrar_video():
                 ret, frame = cap.read()
@@ -141,11 +161,8 @@ class SistemaReconhecimentoFacial:
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
                     for (x, y, w, h) in faces:
-                        cor = (0, 255, 0) if autenticado[0] else (0, 0, 255)
-                        cv2.rectangle(frame, (x, y), (x+w, y+h), cor, 2)
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
                         break
-                    with lock:
-                        ultimo_frame[0] = frame.copy()
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     img = Image.fromarray(frame_rgb)
                     imgtk = ImageTk.PhotoImage(image=img)
@@ -153,7 +170,7 @@ class SistemaReconhecimentoFacial:
                     l_video.configure(image=imgtk)
                 l_video.after(100, mostrar_video)
 
-            Button(camera_window, text="Iniciar Captura Automática", command=lambda: threading.Thread(target=capturar_automatico).start(),
+            Button(camera_window, text="Tirar Foto", command=tirar_foto,
                    bg="#4caf50", fg="white", font=("Arial", 12, "bold")).pack(pady=10)
             Button(camera_window, text="Fechar", command=lambda: [cap.release(), camera_window.destroy()],
                    bg="#f44336", fg="white", font=("Arial", 12, "bold")).pack(pady=10)
@@ -166,7 +183,7 @@ class SistemaReconhecimentoFacial:
             nome = entry_nome.get()
             data_nascimento = entry_data.get()
             cpf = entry_cpf.get()
-            if hasattr(self, "imagens_faciais_capturadas") and len(self.imagens_faciais_capturadas) >= 4:
+            if hasattr(self, "imagens_faciais_capturadas") and len(self.imagens_faciais_capturadas) == 8:
                 cadastro = Cadastro(nome, data_nascimento, cpf, self.imagens_faciais_capturadas)
                 if cadastro.validar_cpf():
                     cadastro.cadastrar_usuario()
@@ -177,7 +194,7 @@ class SistemaReconhecimentoFacial:
                 else:
                     messagebox.showerror("Erro", "CPF inválido.")
             else:
-                messagebox.showerror("Erro", "Capture 2 imagens faciais antes de salvar.")
+                messagebox.showerror("Erro", "Capture 4 fotos (cada uma com variação) antes de salvar.")
 
         Button(self.frame_cadastro, text="Salvar Cadastro", command=salvar_cadastro, bg="#4caf50", fg="white", font=("Arial", 14, "bold"), width=18).pack(pady=10)
         Button(self.frame_cadastro, text="← Voltar", command=self.mostrar_menu, bg="#2196f3", fg="white", font=("Arial", 14, "bold"), width=18).pack(pady=10)
@@ -220,79 +237,94 @@ class SistemaReconhecimentoFacial:
 
                 novas_imagens_faciais = []
 
-                def gerar_variacoes(imagem):
-                    imagens = [imagem]
-                    img_cinza = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
-                    img_eq = cv2.equalizeHist(img_cinza)
-                    img_final = cv2.cvtColor(img_eq, cv2.COLOR_GRAY2BGR)
-                    imagens.append(img_final)
-                    return imagens
-
                 def salvar_novas_fotos():
+                    instrucoes = [
+                        "Olhe para a câmera e mantenha o rosto centralizado.",
+                        "Vire levemente o rosto para a ESQUERDA.",
+                        "Vire levemente o rosto para a DIREITA.",
+                        "Aproxime o rosto da câmera."
+                    ]
+                    fotos_capturadas = []
+                    passo = [0]
+
                     camera_window = Toplevel(alterar_window)
-                    camera_window.title("Salvar Novas Fotos")
-                    camera_window.geometry("500x400")
+                    camera_window.title("Capturar Novas Fotos")
+                    camera_window.geometry("600x600")
                     camera_window.configure(bg="#f0f0f0")
 
-                    frame_video = Frame(camera_window, bg="#f0f0f0", height=300)
+                    frame_video = Frame(camera_window, bg="#f0f0f0", height=400)
                     frame_video.pack(fill="x")
                     frame_video.pack_propagate(False)
                     l_video = Label(frame_video)
                     l_video.pack(expand=True)
 
+                    label_instrucao = Label(camera_window, text=instrucoes[0], font=("Arial", 14, "bold"), bg="#f0f0f0", fg="#2196f3")
+                    label_instrucao.pack(pady=15)
+
                     cap = cv2.VideoCapture(0)
                     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-                    fotos_capturadas = []
 
-                    def capturar_automatico():
-                        count = 0
-                        while count < 2:
-                            ret, frame = cap.read()
-                            if not ret:
-                                continue
-                            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                            faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-                            if len(faces) > 0:
-                                x, y, w, h = faces[0]
-                                rosto = frame[y:y+h, x:x+w]
-                                rosto = cv2.resize(rosto, (224, 224))
-                                for img_var in gerar_variacoes(rosto):
-                                    fotos_capturadas.append(img_var)
-                                count += 1
-                                l_video.after(1, lambda: l_video.config(text=f"Capturando: {count}/2"))
-                            camera_window.update()
-                            time.sleep(0.2)
-                        cap.release()
-                        camera_window.destroy()
-                        # Apaga as imagens antigas e salva as novas
-                        pasta_cpf = os.path.join("faces", usuario[3])
-                        import shutil
-                        if os.path.exists(pasta_cpf):
-                            shutil.rmtree(pasta_cpf)
-                        os.makedirs(pasta_cpf, exist_ok=True)
-                        imagem_paths = []
-                        for i, imagem in enumerate(fotos_capturadas):
-                            imagem_path = os.path.join(pasta_cpf, f"{usuario[3]}_{i+1}.jpg")
-                            cv2.imwrite(imagem_path, imagem)
-                            imagem_paths.append(imagem_path)
-                        novas_imagens_faciais.clear()
-                        novas_imagens_faciais.extend(imagem_paths)
-                        messagebox.showinfo("Captura", "Novas fotos salvas com sucesso!")
-
-                    Button(camera_window, text="Iniciar Captura Automática", command=lambda: threading.Thread(target=capturar_automatico).start(),
-                           bg="#4caf50", fg="white", font=("Arial", 12, "bold")).pack(pady=10)
-                    Button(camera_window, text="Fechar", command=lambda: [cap.release(), camera_window.destroy()],
-                           bg="#f44336", fg="white", font=("Arial", 12, "bold")).pack(pady=10)
+                    def tirar_foto():
+                        ret, frame = cap.read()
+                        if not ret:
+                            messagebox.showerror("Erro", "Não foi possível capturar a imagem.")
+                            return
+                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+                        if len(faces) > 0:
+                            x, y, w, h = faces[0]
+                            rosto = frame[y:y+h, x:x+w]
+                            rosto = cv2.resize(rosto, (224, 224))
+                            fotos_capturadas.append(rosto)  # original
+                            variacao = gerar_variacao_unica(rosto, passo[0])
+                            fotos_capturadas.append(variacao)
+                            passo[0] += 1
+                            if passo[0] < len(instrucoes):
+                                label_instrucao.config(text=instrucoes[passo[0]])
+                                messagebox.showinfo("Foto tirada", "Foto capturada com sucesso!\n" + ("Próxima orientação: " + instrucoes[passo[0]]))
+                            else:
+                                cap.release()
+                                camera_window.destroy()
+                                # Apaga as imagens antigas e salva as novas
+                                pasta_cpf = os.path.join("faces", usuario[3])
+                                import shutil
+                                if os.path.exists(pasta_cpf):
+                                    shutil.rmtree(pasta_cpf)
+                                os.makedirs(pasta_cpf, exist_ok=True)
+                                imagem_paths = []
+                                for i, imagem in enumerate(fotos_capturadas):
+                                    imagem_path = os.path.join(pasta_cpf, f"{usuario[3]}_{i+1}.jpg")
+                                    cv2.imwrite(imagem_path, imagem)
+                                    imagem_paths.append(imagem_path)
+                                novas_imagens_faciais.clear()
+                                novas_imagens_faciais.extend(imagem_paths)
+                                # Salva novos embeddings
+                                from cadastro import salvar_embeddings
+                                salvar_embeddings(fotos_capturadas, usuario[3])
+                                messagebox.showinfo("Captura", "Novas fotos e embeddings salvos com sucesso!")
+                        else:
+                            messagebox.showwarning("Atenção", "Nenhum rosto detectado. Tente novamente.")
 
                     def mostrar_video():
                         ret, frame = cap.read()
                         if ret:
+                            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                            faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+                            for (x, y, w, h) in faces:
+                                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                                break
                             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                             img = Image.fromarray(frame_rgb)
                             imgtk = ImageTk.PhotoImage(image=img)
                             l_video.imgtk = imgtk
                             l_video.configure(image=imgtk)
-                        l_video.after(10, mostrar_video)
+                        l_video.after(100, mostrar_video)
+
+                    Button(camera_window, text="Tirar Foto", command=tirar_foto,
+                           bg="#4caf50", fg="white", font=("Arial", 12, "bold")).pack(pady=10)
+                    Button(camera_window, text="Fechar", command=lambda: [cap.release(), camera_window.destroy()],
+                           bg="#f44336", fg="white", font=("Arial", 12, "bold")).pack(pady=10)
 
                     mostrar_video()
 
@@ -383,11 +415,6 @@ class SistemaReconhecimentoFacial:
         login_window.geometry("700x500")
         login_window.configure(bg="#222")
 
-        # Remova o frame_top e o Label "Login Facial"
-        # frame_top = Frame(login_window, bg="#222", height=100)
-        # frame_top.pack(fill="x")
-        # Label(frame_top, text="Login Facial", font=("Arial", 36, "bold"), fg="#00ff88", bg="#222").pack(pady=30)
-
         frame_video = Frame(login_window, bg="#222", width=500, height=300)
         frame_video.pack(expand=True)
         frame_video.pack_propagate(False)
@@ -408,9 +435,10 @@ class SistemaReconhecimentoFacial:
             if not os.path.exists("faces"):
                 return embeddings
             for cpf in os.listdir("faces"):
-                emb_path = os.path.join("faces", cpf, "embedding.npy")
-                if os.path.exists(emb_path):
-                    embeddings[cpf] = np.load(emb_path)
+                for arquivo in os.listdir(os.path.join("faces", cpf)):
+                    if arquivo.endswith(".npy"):
+                        emb_path = os.path.join("faces", cpf, arquivo)
+                        embeddings.setdefault(cpf, []).append(np.load(emb_path))
             return embeddings
 
         embeddings_cadastrados = carregar_embeddings()
@@ -418,7 +446,6 @@ class SistemaReconhecimentoFacial:
         ultimo_rosto_presente = [None]
         tempo_espera = 4.0  # segundos
 
-        # Mensagem fixa, agora em verde e centralizada
         label_posicione = Label(
             login_window,
             text="Posicione o rosto",
@@ -465,16 +492,20 @@ class SistemaReconhecimentoFacial:
                         if time.time() - ultimo_rosto_presente[0] >= tempo_espera:
                             try:
                                 embedding_atual = DeepFace.represent(frame, model_name="ArcFace")[0]["embedding"]
-                                for cpf, emb_cad in embeddings_cadastrados.items():
-                                    dist = np.linalg.norm(np.array(emb_cad) - np.array(embedding_atual))
-                                    if dist < 10:
-                                        autenticado[0] = True
-                                        cap.release()
-                                        acuracia = max(0, int((1 - dist/10) * 100))
-                                        usuario = get_user_by_cpf(cpf)
-                                        nome = usuario[1] if usuario else "Usuário"
-                                        login_window.after(0, lambda: self.mostrar_acesso_liberado(cpf, nome, acuracia))
-                                        login_window.after(0, login_window.destroy)
+                                for cpf, lista_embs in embeddings_cadastrados.items():
+                                    for emb_cad in lista_embs:
+                                        dist = np.linalg.norm(np.array(emb_cad) - np.array(embedding_atual))
+                                        if dist < 7:
+                                            acuracia = max(0, int((1 - dist/10) * 100))
+                                            if acuracia >= 70:
+                                                autenticado[0] = True
+                                                cap.release()
+                                                usuario = get_user_by_cpf(cpf)
+                                                nome = usuario[1] if usuario else "Usuário"
+                                                login_window.after(0, lambda: self.mostrar_acesso_liberado(cpf, nome, acuracia))
+                                                login_window.after(0, login_window.destroy)
+                                                break
+                                    if autenticado[0]:
                                         break
                             except Exception as e:
                                 print("Erro:", e)
@@ -535,51 +566,10 @@ class SistemaReconhecimentoFacial:
         btn_fechar.config(state="disabled")
         threading.Thread(target=animacao).start()
 
-    def tratar_imagem(self, imagem):
-        if imagem is None:
-            raise ValueError("Imagem inválida para tratamento.")
-        return cv2.resize(imagem, (224, 224))
-
-    def autenticar_com_acuracia(self, frame, model_name='ArcFace'):
-        try:
-            print("Iniciando autenticação facial...")
-            imagem_tratada = self.tratar_imagem(frame)
-            conn = connect_to_database()
-            cursor = conn.cursor()
-            cursor.execute('SELECT cpf, imagem_facial FROM usuarios')
-            usuarios = cursor.fetchall()
-            print(f"Usuários encontrados no banco: {len(usuarios)}")
-            conn.close()
-            melhor_score = None
-            melhor_cpf = None
-            for cpf, imagens_str in usuarios:
-                imagens_cadastradas = imagens_str.split(";")
-                for imagem_path in imagens_cadastradas:
-                    if not os.path.exists(imagem_path):
-                        continue
-                    try:
-                        resultado = DeepFace.verify(imagem_tratada, imagem_path, model_name=model_name)
-                        score = 1 - resultado["distance"]
-                        if resultado["verified"] and (melhor_score is None or score > melhor_score):
-                            melhor_score = score
-                            melhor_cpf = cpf
-                    except Exception:
-                        continue
-            return melhor_score, melhor_cpf
-        except Exception as e:
-            print(f"Erro geral na autenticação: {e}")
-            import traceback
-            traceback.print_exc()
-            messagebox.showerror("Erro geral", f"{e}")
-            return None, None
-
     def registrar_login(self, cpf, nome, acuracia):
-        # Salva no banco
         agora = datetime.datetime.now()
         data_hora = agora.strftime("%d/%m/%Y %H:%M:%S")
         insert_login(cpf, nome, acuracia, data_hora)
-
-        # Salva em arquivo por dia
         pasta_log = "logins"
         if not os.path.exists(pasta_log):
             os.makedirs(pasta_log)
@@ -589,7 +579,7 @@ class SistemaReconhecimentoFacial:
             f.write(f"{data_hora} | CPF: {cpf} | Nome: {nome} | Acurácia: {acuracia}%\n")
 
 if __name__ == "__main__":
-    create_login_table()  # Garante que a tabela de logins existe
+    create_login_table()
     root = Tk()
     sistema = SistemaReconhecimentoFacial(root)
     print("Sistema iniciado!")
