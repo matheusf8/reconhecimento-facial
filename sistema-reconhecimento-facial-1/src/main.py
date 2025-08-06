@@ -189,7 +189,7 @@ class SistemaReconhecimentoFacial:
                     cadastro.cadastrar_usuario()
                     messagebox.showinfo("Cadastro", "Cadastro realizado com sucesso!")
                     self.imagens_faciais_capturadas = []
-                    self.frame_cadastro.destroy()
+                    self.frame_cadastro.pack_forget()  # <-- Troque destroy() por pack_forget()
                     self.mostrar_menu()
                 else:
                     messagebox.showerror("Erro", "CPF inválido.")
